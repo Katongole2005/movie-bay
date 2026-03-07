@@ -1,0 +1,455 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import type { Movie } from "@/types/movie";
+import { getImageUrl } from "@/lib/api";
+import { motion, AnimatePresence } from "framer-motion";
+interface HeroCarouselProps {
+  movies: Movie[];
+  onPlay: (movie: Movie) => void;
+  onMovieClick?: (movie: Movie) => void;
+  title?: string;
+  showViewAll?: boolean;
+  onViewAll?: () => void;
+}
+export function HeroCarousel({
+  movies,
+  onPlay,
+  onMovieClick,
+  title = "Top Movies",
+  showViewAll = true,
+  onViewAll
+}: HeroCarouselProps) {
+  const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [isLoaded, setIsLoaded] = React.useState(false);
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [slideProgress, setSlideProgress] = React.useState(0);
+  const totalSlides = Math.min(movies.length, 8);
+
+  const glowHue = 250 + (selectedIndex * 22) % 80;
+
+  // Trigger load animation
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoaded(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+  // FAST TRANSITIONS: ~450ms to match reference video speed
+  const TRANSITION_DURATION = 450;
+
+  const scrollTo = React.useCallback((index: number) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setSelectedIndex(index);
+    setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+  }, [isTransitioning]);
+  const scrollPrev = React.useCallback(() => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setSelectedIndex(prev => (prev - 1 + totalSlides) % totalSlides);
+    setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+  }, [totalSlides, isTransitioning]);
+  const scrollNext = React.useCallback(() => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setSelectedIndex(prev => (prev + 1) % totalSlides);
+    setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+  }, [totalSlides, isTransitioning]);
+
+  // Auto-advance every 3 seconds
+  React.useEffect(() => {
+    if (totalSlides <= 1) return;
+    const timer = setInterval(() => {
+      scrollNext();
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [scrollNext, totalSlides]);
+
+  // Progress bar for mobile: resets and fills over 3s per slide
+  React.useEffect(() => {
+    setSlideProgress(0);
+    const INTERVAL = 50;
+    const TOTAL_MS = 3000;
+    const step = (INTERVAL / TOTAL_MS) * 100;
+    const id = setInterval(() => {
+      setSlideProgress(p => Math.min(p + step, 100));
+    }, INTERVAL);
+    return () => clearInterval(id);
+  }, [selectedIndex]);
+
+  // Touch/swipe handling
+  const touchStartX = React.useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) scrollNext(); else scrollPrev();
+    }
+  };
+
+  // Generate random IMDB rating for demo (between 5.0 and 9.0)
+  const getImdbRating = (movie: Movie) => {
+    const hash = movie.mobifliks_id.split('').reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return (5 + Math.abs(hash) % 40 / 10).toFixed(1);
+  };
+  if (!movies.length) {
+    return <div className="rounded-3xl bg-[hsl(265,70%,25%)] p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div className="h-7 w-32 bg-white/10 rounded shimmer" />
+        <div className="h-5 w-16 bg-white/10 rounded shimmer" />
+      </div>
+      <div className="flex justify-center gap-4">
+        <div className="w-40 h-56 bg-white/10 rounded-2xl shimmer" />
+      </div>
+    </div>;
+  }
+  const currentMovie = movies[selectedIndex];
+
+  // Desktop layout - get exactly 5 visible cards (2 left + center + 2 right)
+  const getDesktopCards = () => {
+    const cards: {
+      movie: Movie;
+      position: number;
+      originalIndex: number;
+    }[] = [];
+    const numSlides = Math.min(movies.length, 8);
+    for (let i = -2; i <= 2; i++) {
+      let index = selectedIndex + i;
+      if (index < 0) index = numSlides + index;
+      if (index >= numSlides) index = index - numSlides;
+      if (index >= 0 && index < numSlides) {
+        cards.push({
+          movie: movies[index],
+          position: i,
+          originalIndex: index
+        });
+      }
+    }
+    // Sort by position so center renders last (on top)
+    return cards.sort((a, b) => Math.abs(b.position) - Math.abs(a.position));
+  };
+
+  // 3D STACKED HERO - Matching reference: wide spread, dramatic angles
+  // CINEMATIC ANIMATIONS: slow, smooth, premium motion
+  const getCardStyles = (position: number, isAnimating: boolean = false) => {
+    const isCenter = position === 0;
+    const absPos = Math.abs(position);
+    const sign = position > 0 ? 1 : -1;
+
+    // CENTER CARD: Forward, largest, facing straight - SUBTLE SCALE UP (1.05x)
+    if (isCenter) {
+      return {
+        translateX: 0,
+        translateZ: 150,
+        // Pushed more forward for depth
+        rotateY: 0,
+        scale: 1.05,
+        // Cinematic scale-up effect
+        opacity: 1,
+        brightness: 1,
+        zIndex: 100
+      };
+    }
+    // FIRST SIDE CARDS (nearest): Angled inward, drifting backward
+    else if (absPos === 1) {
+      return {
+        translateX: sign * 230,
+        // Wide spread like reference
+        translateZ: 10,
+        // Drifted backward in perspective
+        rotateY: sign * -18,
+        // Negative = facing toward center
+        scale: 0.88,
+        // Slightly smaller for depth contrast
+        opacity: 1,
+        brightness: 0.85,
+        zIndex: 80
+      };
+    }
+    // FAR SIDE CARDS: More dramatic angle, further back in stack
+    else {
+      return {
+        translateX: sign * 420,
+        // Very wide spread
+        translateZ: -80,
+        // Further back in perspective
+        rotateY: sign * -25,
+        // More dramatic inward angle
+        scale: 0.78,
+        opacity: 0.92,
+        brightness: 0.7,
+        zIndex: 60
+      };
+    }
+  };
+  return <div className="rounded-3xl bg-[hsl(265,70%,25%)] p-4 md:p-5 lg:p-6 overflow-hidden relative">
+    {/* ===== DESKTOP AMBIENT LIGHTING & ATMOSPHERE ===== */}
+    {/* Primary spotlight glow behind center card */}
+    <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[600px] bg-[radial-gradient(ellipse_at_center,hsl(270,60%,55%)/0.35_0%,transparent_65%)] pointer-events-none" />
+
+    {/* Floating ambient orbs */}
+    <motion.div className="hidden md:block absolute top-10 left-[15%] w-64 h-64 bg-[hsl(280,60%,50%)/0.12] rounded-full blur-[80px] pointer-events-none" style={{
+      animation: 'floatSlow 10s ease-in-out infinite'
+    }} />
+    <motion.div className="hidden md:block absolute bottom-10 right-[15%] w-56 h-56 bg-[hsl(260,70%,60%)/0.1] rounded-full blur-[70px] pointer-events-none" style={{
+      animation: 'floatSlow 12s ease-in-out infinite reverse'
+    }} />
+
+    {/* Cinematic vignette overlay */}
+    <div className="hidden md:block absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,hsl(265,70%,12%)/0.7_100%)] pointer-events-none rounded-3xl" />
+
+    {/* Subtle noise texture */}
+    <motion.div className="hidden md:block absolute inset-0 opacity-[0.025] pointer-events-none rounded-3xl" style={{
+      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+    }} />
+
+    {/* Header */}
+    <div className="relative z-10 flex justify-between items-center mb-3 md:mb-4 lg:mb-5">
+      <h2 className="text-xl md:text-2xl lg:text-3xl font-display font-bold text-white tracking-tight">
+        {title}
+      </h2>
+      {showViewAll && <button onClick={onViewAll} className="text-sm md:text-base font-medium text-white/70 hover:text-white transition-colors">
+        View all
+      </button>}
+    </div>
+
+    {/* ===== MOBILE CAROUSEL - UNCHANGED ===== */}
+    <motion.div className="md:hidden relative flex items-center justify-center py-2" style={{
+      perspective: "1200px"
+    }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="relative w-[160px] h-[240px]">
+        {movies.slice(0, 8).map((movie, index) => {
+          const offset = index - selectedIndex;
+          const numSlides = Math.min(movies.length, 8);
+          let adjustedOffset = offset;
+          if (offset > numSlides / 2) adjustedOffset = offset - numSlides;
+          if (offset < -numSlides / 2) adjustedOffset = offset + numSlides;
+          const isSelected = index === selectedIndex;
+          const isVisible = Math.abs(adjustedOffset) <= 2;
+          const rotateY = adjustedOffset * -25;
+          const translateX = adjustedOffset * 28;
+          const translateZ = Math.abs(adjustedOffset) * -120;
+          const scale = isSelected ? 1 : Math.max(0.65, 1 - Math.abs(adjustedOffset) * 0.2);
+          const opacity = isSelected ? 1 : Math.max(0.5, 1 - Math.abs(adjustedOffset) * 0.25);
+          const zIndex = 20 - Math.abs(adjustedOffset) * 5;
+          if (!isVisible) return null;
+          return <motion.div key={movie.mobifliks_id} className="absolute inset-0 cursor-pointer transition-all duration-500 ease-out" style={{
+            transform: `translateX(${translateX}%) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+            opacity,
+            zIndex,
+            transformStyle: "preserve-3d"
+          }} onClick={() => isSelected ? (onMovieClick ? onMovieClick(movie) : onPlay(movie)) : scrollTo(index)}>
+            <div className={cn("w-full h-full rounded-xl overflow-hidden shadow-2xl transition-shadow duration-500", isSelected && "shadow-[0_20px_60px_-10px_rgba(0,0,0,0.5)]")}>
+              <motion.img src={getImageUrl(movie.image_url)} alt={movie.title} className={cn("w-full h-full object-cover", isSelected && "animate-ken-burns")} style={isSelected ? { animationDuration: '10s' } : undefined} loading={index < 3 ? "eager" : "lazy"} />
+              <div className={cn("absolute inset-0 bg-gradient-to-t from-black/40 to-transparent transition-opacity duration-300", isSelected ? "opacity-0" : "opacity-50")} />
+            </div>
+          </motion.div>;
+        })}
+      </div>
+    </motion.div>
+
+    {/* ===== DESKTOP/TABLET 3D STACKED HERO - CINEMATIC ANIMATIONS ===== */}
+    <motion.div className="hidden md:block relative py-2 lg:py-3" style={{
+      perspective: "1200px",
+      perspectiveOrigin: "50% 55%"
+    }}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`glow-${selectedIndex}`}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 0.85, scale: 1 }}
+          exit={{ opacity: 0, scale: 1.1 }}
+          transition={{ duration: 0.8 }}
+          className="absolute top-1/2 left-1/2 w-[350px] lg:w-[450px] h-[450px] lg:h-[550px] pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at center, hsl(${glowHue},65%,55%) 0%, hsl(${glowHue - 15},60%,35%) 35%, transparent 65%)`,
+            filter: 'blur(55px)',
+            x: "-50%",
+            y: "-50%",
+          }}
+        />
+      </AnimatePresence>
+
+      {/* Secondary ambient glow for depth */}
+      <motion.div className="absolute top-1/2 left-1/2 w-[500px] lg:w-[600px] h-[350px] lg:h-[400px] pointer-events-none" style={{
+        opacity: isLoaded ? 0.4 : 0,
+        background: 'radial-gradient(ellipse at center, hsl(280,50%,45%) 0%, transparent 60%)',
+        filter: 'blur(80px)',
+        transform: `translate(calc(-50% + ${selectedIndex * 5}px), calc(-50% + 20px))`,
+        transition: 'opacity 1.5s ease-out, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)'
+      }} />
+
+      {/* 3D Stage */}
+      <motion.div className="relative flex items-end justify-center min-h-[280px] lg:min-h-[360px] pb-2" style={{
+        transformStyle: 'preserve-3d'
+      }}>
+        {getDesktopCards().map(({
+          movie,
+          position,
+          originalIndex
+        }) => {
+          const isCenter = position === 0;
+          const styles = getCardStyles(position, isTransitioning);
+          return <motion.div key={movie.mobifliks_id} className="absolute cursor-pointer" style={{
+            transform: isLoaded ? `translateX(${styles.translateX}px) translateZ(${styles.translateZ}px) rotateY(${styles.rotateY}deg) scale(${styles.scale})` : `translateX(${styles.translateX}px) translateY(60px) translateZ(${styles.translateZ - 100}px) rotateY(${styles.rotateY + (position > 0 ? 10 : -10)}deg) scale(${styles.scale * 0.8})`,
+            opacity: isLoaded ? styles.opacity : 0,
+            zIndex: styles.zIndex,
+            transformStyle: "preserve-3d",
+            filter: `brightness(${styles.brightness})`,
+            // FAST TIMING: ~450ms matching reference video speed with snappy easing
+            transition: `transform 0.45s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.35s ease-out, filter 0.45s ease-out`,
+            bottom: '0'
+          }} onClick={() => isCenter ? (onMovieClick ? onMovieClick(movie) : onPlay(movie)) : scrollTo(originalIndex)}>
+            {/* Card */}
+            <motion.div className="relative w-[140px] lg:w-[180px] h-[210px] lg:h-[270px] rounded-xl lg:rounded-2xl overflow-hidden" style={{
+              boxShadow: isCenter ? '0 35px 70px -20px rgba(0,0,0,0.7), 0 0 50px -10px rgba(139,92,246,0.4)' : `${position * 10}px 25px 50px -15px rgba(0,0,0,0.55)`,
+              transition: 'box-shadow 0.7s ease'
+            }}>
+              {/* Movie poster with Ken Burns effect */}
+              <motion.img src={getImageUrl(movie.image_url)} alt={movie.title} className={cn("w-full h-full object-cover transition-transform duration-500", isCenter && "animate-ken-burns")} loading={Math.abs(position) < 2 ? "eager" : "lazy"} style={isCenter ? { animationDuration: '12s' } : undefined} />
+
+              {/* Gradient overlay */}
+              <motion.div className="absolute inset-0" style={{
+                background: isCenter ? 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 35%, transparent 100%)' : 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)'
+              }} />
+
+              {/* Content type badge */}
+              <div className="absolute top-3 left-3">
+                <span className="px-2.5 py-1 text-[10px] font-semibold rounded-full bg-black/60 text-white border border-white/20 backdrop-blur">
+                  {movie.type === "series" ? "SERIES" : "MOVIE"}
+                </span>
+              </div>
+
+              {/* Glow ring for center */}
+              {isCenter && <div className="absolute inset-0 rounded-xl lg:rounded-2xl ring-1 ring-white/15 ring-inset pointer-events-none" />}
+            </motion.div>
+
+            {/* Genre pills BELOW each card */}
+            {movie.genres && movie.genres.length > 0 && <div className="flex gap-1.5 lg:gap-2 justify-center mt-3 lg:mt-4">
+              {movie.genres.slice(0, 3).map(genre => <span key={genre} className="px-2.5 lg:px-3.5 py-1 lg:py-1.5 text-[10px] lg:text-xs font-medium rounded-full bg-white/10 backdrop-blur-sm text-white/90 border border-white/20">
+                {genre}
+              </span>)}
+            </div>}
+          </motion.div>;
+        })}
+      </motion.div>
+
+      {/* Navigation arrows for desktop */}
+      <button onClick={scrollPrev} className="absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/20 hover:text-white transition-all duration-300 z-30" aria-label="Previous movie">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <button onClick={scrollNext} className="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/20 hover:text-white transition-all duration-300 z-30" aria-label="Next movie">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </motion.div>
+
+    {/* Movie Info - Enhanced for desktop */}
+    <AnimatePresence mode="wait">
+      {currentMovie && (
+        <motion.div
+          key={currentMovie.mobifliks_id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="relative z-10 mt-3 md:mt-4 text-center"
+        >
+          {/* Title and rating with parallax effect */}
+          <div className="flex items-center justify-center gap-2 md:gap-3 mb-2 md:mb-3">
+            <h3 className="text-lg md:text-xl lg:text-2xl font-display font-bold text-white tracking-tight drop-shadow-lg">
+              {currentMovie.title}
+            </h3>
+            <span className="px-2.5 md:px-4 py-1 md:py-1.5 text-[10px] md:text-xs font-bold rounded-sm text-black bg-[hsl(50,100%,50%)]">
+              IMDB {getImdbRating(currentMovie)}
+            </span>
+          </div>
+
+          <div className="md:hidden">
+            {/* Genre pills could go here if needed for mobile index */}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Dot Indicators + Progress Bar */}
+    <div className="relative z-10 mt-3 md:mt-4">
+      {/* Mobile: slide progress bar */}
+      <div className="md:hidden flex flex-col items-center gap-2">
+        <div className="flex justify-center gap-1.5">
+          {movies.slice(0, 8).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => scrollTo(index)}
+              className={cn(
+                "transition-all duration-500 rounded-full",
+                index === selectedIndex
+                  ? "w-4 h-1.5 bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+                  : "w-1.5 h-1.5 bg-white/30 hover:bg-white/50"
+              )}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+        {/* Linear progress bar across full width */}
+        <div className="w-24 mx-auto h-0.5 rounded-full bg-white/20 overflow-hidden">
+          <motion.div
+            className="h-full bg-white rounded-full"
+            animate={{ width: `${slideProgress}%` }}
+            transition={{ ease: "linear", duration: 0.05 }}
+          />
+        </div>
+      </div>
+
+      {/* Desktop: regular dots */}
+      <motion.div
+        className="hidden md:flex justify-center gap-2.5"
+        style={{
+          transform: isLoaded ? 'translateY(0)' : 'translateY(10px)',
+          opacity: isLoaded ? 1 : 0,
+          transition: 'all 0.6s ease-out 0.4s'
+        }}
+      >
+        {movies.slice(0, 8).map((_, index) => (
+          <button
+            key={index}
+            onClick={() => scrollTo(index)}
+            className={cn(
+              "transition-all duration-500 rounded-full",
+              index === selectedIndex
+                ? "w-8 h-2 bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                : "w-2 h-2 bg-white/30 hover:bg-white/50"
+            )}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </motion.div>
+    </div>
+
+    {/* CSS Keyframes for cinematic animations */}
+    <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-6px); }
+        }
+        @keyframes floatSlow {
+          0%, 100% { transform: translateY(0px) translateX(0px); }
+          50% { transform: translateY(-8px) translateX(4px); }
+        }
+        @keyframes kenBurns {
+          0% { transform: scale(1) translate(0, 0); }
+          50% { transform: scale(1.08) translate(-1.5%, -1%); }
+          100% { transform: scale(1) translate(0, 0); }
+        }
+        .animate-ken-burns {
+          animation: kenBurns 12s ease-in-out infinite;
+        }
+      `}</style>
+  </div>;
+}
