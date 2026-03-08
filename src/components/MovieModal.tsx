@@ -126,7 +126,10 @@ const fallbackCastAvatar = "https://placehold.co/160x160/1a1a2e/ffffff?text=Acto
 
 export function MovieModal({ movie, isOpen, onClose, onPlay }: MovieModalProps) {
   // NOTE: hooks must be called unconditionally; keep all hooks above the null-guard return.
-  const backdrop = movie?.backdrop_url || null;
+  const [tmdbBackdrop, setTmdbBackdrop] = React.useState<string | null>(null);
+  const [tmdbCast, setTmdbCast] = React.useState<CastMember[] | null>(null);
+
+  const backdrop = tmdbBackdrop || movie?.backdrop_url || null;
 
   // IMPORTANT: do NOT fall back to poster for the backdrop/background.
   // This avoids the "image swap" where a poster loads first, then the backdrop replaces it.
@@ -137,6 +140,50 @@ export function MovieModal({ movie, isOpen, onClose, onPlay }: MovieModalProps) 
   const [userRating, setUserRatingState] = React.useState<number | null>(null);
   const [inWatchlist, setInWatchlist] = React.useState(false);
   const [entranceVisible, setEntranceVisible] = React.useState(false);
+
+  // Fetch missing TMDB data (especially for series)
+  React.useEffect(() => {
+    setTmdbBackdrop(null);
+    setTmdbCast(null);
+    if (!movie || (!isOpen)) return;
+
+    // Fetch if backdrop is missing OR cast is missing
+    const needsBackdrop = !movie.backdrop_url;
+    const needsCast = !movie.cast || movie.cast.length === 0;
+
+    if (needsBackdrop || needsCast) {
+      const fetchTmdb = async () => {
+        try {
+          const type = movie.type === "series" ? "tv" : "movie";
+          const query = encodeURIComponent(movie.title.replace(/Season \d+/i, '').trim());
+          const year = movie.year ? `&year=${movie.year}` : '';
+          const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=422176371cbca367ffda12fccee25ba7&query=${query}${year}`);
+          const searchData = await searchRes.json();
+          const tmdbId = searchData.results?.[0]?.id;
+
+          if (tmdbId) {
+            const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=422176371cbca367ffda12fccee25ba7&append_to_response=credits`);
+            const detailsData = await detailsRes.json();
+
+            if (needsBackdrop && detailsData.backdrop_path) {
+              setTmdbBackdrop(`https://image.tmdb.org/t/p/original${detailsData.backdrop_path}`);
+            }
+            if (needsCast && detailsData.credits?.cast) {
+              const fetchedCast = detailsData.credits.cast.slice(0, 15).map((c: any) => ({
+                name: c.name,
+                character: c.character,
+                profile_url: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null,
+              }));
+              setTmdbCast(fetchedCast);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch TMDB fallback data:", error);
+        }
+      };
+      fetchTmdb();
+    }
+  }, [movie?.mobifliks_id, isOpen]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -187,8 +234,9 @@ export function MovieModal({ movie, isOpen, onClose, onPlay }: MovieModalProps) 
 
   const isSeries = movie.type === "series";
   const series = movie as Series;
-  const cast: CastMember[] =
-    movie.cast && movie.cast.length > 0
+  const cast: CastMember[] = tmdbCast && tmdbCast.length > 0
+    ? tmdbCast
+    : movie.cast && movie.cast.length > 0
       ? movie.cast
       : (movie.stars || []).map((name) => ({ name }));
   const rating = movie.views ? Math.min(4.5 + (movie.views / 100000) * 0.5, 5).toFixed(1) : "4.5";
@@ -744,9 +792,9 @@ function MobileMovieLayout({
             />
           </>
         )}
-        <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40" />
+        <div className="absolute inset-0 backdrop-blur-2xl bg-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30" />
 
         {/* Liquid glass decorative elements */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
