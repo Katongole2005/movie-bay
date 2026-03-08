@@ -112,31 +112,18 @@ export function FilterModal({
 
           {/* Animated liquid blobs */}
           <div
-            className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-[#c8f547]/15 blur-3xl saturate-150"
-            style={{
-              animation: "liquidFloat 8s ease-in-out infinite"
-            }}
+            className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-[#c8f547]/15 blur-3xl saturate-150 [animation:liquidFloat_8s_ease-in-out_infinite]"
           />
           <div
-            className="absolute top-1/3 -left-20 w-40 h-40 rounded-full bg-primary/10 blur-3xl"
-            style={{
-              animation: "liquidFloat 10s ease-in-out infinite reverse"
-            }}
+            className="absolute top-1/3 -left-20 w-40 h-40 rounded-full bg-primary/10 blur-3xl [animation:liquidFloat_10s_ease-in-out_infinite_reverse]"
           />
           <div
-            className="absolute -bottom-20 right-1/4 w-52 h-52 rounded-full bg-[#c8f547]/10 blur-3xl saturate-150"
-            style={{
-              animation: "liquidFloat 12s ease-in-out infinite",
-              animationDelay: "2s"
-            }}
+            className="absolute -bottom-20 right-1/4 w-52 h-52 rounded-full bg-[#c8f547]/10 blur-3xl saturate-150 [animation:liquidFloat_12s_ease-in-out_2s_infinite]"
           />
 
           {/* Glass noise texture overlay */}
           <div
-            className="absolute inset-0 opacity-[0.02]"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
-            }}
+            className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml,%3Csvg_viewBox=%270_0_200_200%27_xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter_id=%27noiseFilter%27%3E%3CfeTurbulence_type=%27fractalNoise%27_baseFrequency=%270.9%27_numOctaves=%274%27_stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect_width=%27100%25%27_height=%27100%25%27_filter=%27url(%23noiseFilter)%27/%3E%3C/svg%3E')]"
           />
         </div>
 
@@ -185,13 +172,9 @@ export function FilterModal({
                       "px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform flex items-center gap-2",
                       "hover:scale-105 active:scale-95",
                       isActive
-                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold"
+                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold bg-[#c8f547]"
                         : "bg-white/5 backdrop-blur-md border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20"
                     )}
-                    style={{
-                      background: isActive ? "#c8f547" : undefined,
-                      animationDelay: `${index * 50}ms`,
-                    }}
                   >
                     <Icon className="w-4 h-4" />
                     {type.label}
@@ -222,13 +205,9 @@ export function FilterModal({
                       "px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform",
                       "hover:scale-105 active:scale-95",
                       isActive
-                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold"
+                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold bg-[#c8f547]"
                         : "bg-white/5 backdrop-blur-md border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20"
                     )}
-                    style={{
-                      background: isActive ? "#c8f547" : undefined,
-                      animationDelay: `${index * 50}ms`,
-                    }}
                   >
                     {category.label}
                   </button>
@@ -253,13 +232,9 @@ export function FilterModal({
                       "px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform",
                       "hover:scale-105 active:scale-95",
                       isActive
-                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold"
+                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold bg-[#c8f547]"
                         : "bg-white/5 backdrop-blur-md border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20"
                     )}
-                    style={{
-                      background: isActive ? "#c8f547" : undefined,
-                      animationDelay: `${index * 50}ms`,
-                    }}
                   >
                     {vj.label}
                   </button>
@@ -284,13 +259,9 @@ export function FilterModal({
                       "px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 transform",
                       "hover:scale-105 active:scale-95",
                       isActive
-                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold"
+                        ? "text-black border-transparent shadow-[0_0_15px_rgba(200,245,71,0.3)] font-bold bg-[#c8f547]"
                         : "bg-white/5 backdrop-blur-md border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20"
                     )}
-                    style={{
-                      background: isActive ? "#c8f547" : undefined,
-                      animationDelay: `${index * 30}ms`,
-                    }}
                   >
                     {year}
                   </button>
@@ -308,14 +279,9 @@ export function FilterModal({
               "w-full py-4 rounded-2xl text-base font-semibold transition-all duration-300 transform",
               "hover:scale-[1.02] active:scale-[0.98]",
               hasActiveFilters
-                ? "text-black shadow-[0_0_20px_rgba(200,245,71,0.4)]"
+                ? "text-black shadow-[0_4px_20px_rgba(200,245,71,0.4),inset_0_2px_0_rgba(255,255,255,0.2)] bg-gradient-to-br from-[#c8f547] to-[#a8d40a]"
                 : "bg-white/5 backdrop-blur-md border border-white/10 text-white/50"
             )}
-            style={{
-              background: hasActiveFilters
-                ? "linear-gradient(135deg, #c8f547 0%, #a8d40a 100%)"
-                : undefined,
-            }}
           >
             Apply Filters
             {hasActiveFilters && (

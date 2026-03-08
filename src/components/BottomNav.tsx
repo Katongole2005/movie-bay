@@ -51,9 +51,9 @@ export function BottomNav({ activeTab: activeTabProp, onTabChange }: BottomNavPr
   const activeTab = activeTabProp ?? pathToTab[location.pathname] ?? "home";
 
   return (
-    <nav className="fixed left-1/2 -translate-x-1/2 z-50 md:hidden bottom-nav">
+    <nav className="fixed left-4 right-4 z-50 md:hidden bottom-4">
       {/* Dark pill container */}
-      <div className="relative w-full flex items-center gap-1.5 p-2 rounded-full bottom-nav-container">
+      <div className="relative w-full flex items-center justify-between gap-1 p-2 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -71,14 +71,9 @@ export function BottomNav({ activeTab: activeTabProp, onTabChange }: BottomNavPr
               className={cn(
                 "flex items-center gap-2 rounded-full",
                 isActive
-                  ? "flex-[2] pl-1 pr-4 py-1"
+                  ? "flex-[2] pl-1 pr-4 py-1 bg-white/5"
                   : "flex-1 justify-center p-1"
               )}
-              style={
-                isActive
-                  ? { background: "rgba(255, 255, 255, 0.06)" }
-                  : undefined
-              }
             >
               {/* Icon circle with spring pop */}
               <motion.div
@@ -88,12 +83,12 @@ export function BottomNav({ activeTab: activeTabProp, onTabChange }: BottomNavPr
                     ? { scale: [1, 1.28, 1], transition: { duration: 0.32, ease: "easeOut" } }
                     : { scale: 1 }
                 }
-                className="flex items-center justify-center w-12 h-12 rounded-full"
-                style={{
-                  background: isActive ? "#4ade80" : "#2c2c2e",
-                  boxShadow: isActive ? "0 0 18px rgba(74, 222, 128, 0.4)" : "none",
-                  transition: "background 0.3s ease, box-shadow 0.3s ease",
-                }}
+                className={cn(
+                  "flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ease-in-out",
+                  isActive
+                    ? "bg-[#c8f547] shadow-[0_0_18px_rgba(200,245,71,0.5)]"
+                    : "bg-[#2c2c2e] hover:bg-[#3c3c3e]"
+                )}
               >
                 <Icon
                   className={cn(
@@ -111,8 +106,7 @@ export function BottomNav({ activeTab: activeTabProp, onTabChange }: BottomNavPr
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -8 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
-                    className="text-sm font-medium whitespace-nowrap"
-                    style={{ color: "#ffffff" }}
+                    className="text-sm font-semibold whitespace-nowrap text-white"
                   >
                     {tab.label}
                   </motion.span>
