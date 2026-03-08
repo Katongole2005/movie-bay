@@ -44,11 +44,38 @@ const cleanTitle = (title: string): string => {
     .trim();
 };
 
+const fixYear = (year?: number): number | undefined => {
+  if (!year) return year;
+  const currentYear = new Date().getFullYear();
+  return year > currentYear ? currentYear : year;
+};
+
+const fixReleaseDate = (dateStr?: string): string | undefined => {
+  if (!dateStr) return dateStr;
+  try {
+    const d = new Date(dateStr);
+    const currentYear = new Date().getFullYear();
+    if (d.getFullYear() > currentYear) {
+      d.setFullYear(currentYear);
+      // Return YYYY-MM-DD
+      return d.toISOString().split("T")[0];
+    }
+  } catch (e) {
+    // Ignore invalid dates
+  }
+  return dateStr;
+};
+
 const normalize = (items: unknown[]): Movie[] =>
   Array.isArray(items)
     ? (items as Movie[])
       .filter((m) => m && (m.type === "movie" || m.type === "series"))
-      .map((m) => ({ ...m, title: cleanTitle(m.title ?? "") }))
+      .map((m) => ({
+        ...m,
+        title: cleanTitle(m.title ?? ""),
+        year: fixYear(m.year),
+        release_date: fixReleaseDate(m.release_date),
+      }))
     : [];
 
 // ─── Data Fetching (Supabase Direct) ─────────────────────────────────────────
